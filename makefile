@@ -1,3 +1,3 @@
-.PHONY: start_database
-start_database: 
-	echo "start_database: "
+.PHONY: start_backend
+start_backend: 
+	uvicorn app.main:app --reload

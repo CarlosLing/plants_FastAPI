@@ -19,9 +19,9 @@ def get_db():
 
 @app.post("/sensors/", response_model=schemas.Sensor)
 def create_sensor(sensor: schemas.SensorCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_sensor_name(db, email=sensor.name)
+    db_user = crud.get_sensor_name(db, name=sensor.name)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Name of sensor already exists")
     return crud.create_sensor(db=db, sensor=sensor)
 
 
@@ -29,6 +29,25 @@ def create_sensor(sensor: schemas.SensorCreate, db: Session = Depends(get_db)):
 def read_sensors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     sensors = crud.get_sensors(db, skip=skip, limit=limit)
     return sensors
+
+
+@app.put("/sensors/{sensor_id}")
+async def update_sensor(
+    sensor_id: str, sensor: schemas.SensorUpdate, db: Session = Depends(get_db)
+):
+    db_sensor = crud.update_sensor(db, sensor_id, sensor)
+    if db_sensor is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return db_sensor
+
+
+@app.delete("/sensors/{sensor_id}")
+async def delete_sensor(sensor_id: str, db: Session = Depends(get_db)):
+    success = crud.delete_sensor(db, sensor_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    else:
+        return {"message": "Item deleted successfully"}
 
 
 # Define other endpoints as needed
@@ -52,21 +71,6 @@ def read_sensors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
 #     db.commit()
 #     db.refresh(sensor)
 #     return sensor
-
-
-# @app.put("/sensors/{sensor_id}")
-# async def update_sensor(sensor_id: str, sensor: Sensor):
-#     if sensor_id not in sensors:
-#         raise HTTPException(status_code=404, detail="Sensor not found")
-#     sensors[sensor_id] = sensor
-#     return sensor
-
-# @app.delete("/sensors/{sensor_id}")
-# async def delete_sensor(sensor_id: str):
-#     if sensor_id in sensors:
-#         del sensors[sensor_id]
-#         return {"message": "Sensor deleted"}
-#     raise HTTPException(status_code=404, detail="Sensor not found")
 
 # @app.get("/sensor_readings/")
 # async def get_sensor_readings(sensor_id: str, n_samples: Optional[int] = None, n_days: Optional[int] = None):
