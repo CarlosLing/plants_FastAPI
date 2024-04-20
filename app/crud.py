@@ -1,10 +1,33 @@
 from sqlalchemy.orm import Session
 from . import schemas
-from .models import Sensor
+from .models import Sensor, SensorReading
+from pdb import set_trace
+from sqlalchemy import desc
 
 
 def get_sensor(db: Session, sensor_id: int):
     return db.query(Sensor).filter(Sensor.id == sensor_id).first()
+
+
+def get_sensor_readings(db: Session, sensor_id: int, limit: int = None):
+    query = (
+        db.query(SensorReading)
+        .filter(SensorReading.sensor_id == sensor_id)
+        .limit(limit)
+    )
+    values = [e.value for e in query]
+    timestamps = [e.timestamp for e in query]
+    return {"values": values, "timestamps": timestamps}
+
+
+def get_latest_reading(db: Session, sensor_id: int):
+    reading = (
+        db.query(SensorReading)
+        .filter(SensorReading.sensor_id == sensor_id)
+        .order_by(desc(SensorReading.timestamp))
+        .first()
+    )
+    return reading
 
 
 def get_sensor_name(db: Session, name: str):
@@ -48,3 +71,11 @@ def delete_sensor(db: Session, sensor_id: int) -> bool:
     db.delete(db_sensor)
     db.commit()
     return True
+
+
+def create_sensor_reading(db: Session, sensor_id: schemas.SensorCreate, value: float):
+    new_reading = SensorReading(value=value, sensor_id=sensor_id)
+    db.add(new_reading)
+    db.commit()
+    db.refresh(new_reading)
+    return new_reading

@@ -8,7 +8,6 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 
-# Dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -31,6 +30,31 @@ def read_sensors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
     return sensors
 
 
+@app.get("/sensors/{sensor_id}", response_model=schemas.Sensor)
+def get_sensor(sensor_id: int, db: Session = Depends(get_db)):
+    db_sensor = crud.get_sensor(db, sensor_id=sensor_id)
+    if not db_sensor:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    return db_sensor
+
+
+@app.get("/sensors/{sensor_id}/readings", response_model=schemas.SensorReadingArray)
+def get_sensor_readings(sensor_id: int, db: Session = Depends(get_db)):
+    db_sensor = crud.get_sensor(db, sensor_id=sensor_id)
+    if not db_sensor:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    readings = crud.get_sensor_readings(db=db, sensor_id=sensor_id)
+    return readings
+
+
+@app.get("/sensors/{sensor_id}/latest", response_model=schemas.SensorReading)
+def get_latest_reading(sensor_id: int, db: Session = Depends(get_db)):
+    db_sensor = crud.get_sensor(db, sensor_id=sensor_id)
+    if not db_sensor:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    return crud.get_latest_reading(db=db, sensor_id=sensor_id)
+
+
 @app.put("/sensors/{sensor_id}")
 async def update_sensor(
     sensor_id: str, sensor: schemas.SensorUpdate, db: Session = Depends(get_db)
@@ -50,43 +74,9 @@ async def delete_sensor(sensor_id: str, db: Session = Depends(get_db)):
         return {"message": "Item deleted successfully"}
 
 
-# Define other endpoints as needed
-
-# @app.get("/sensors/")
-# async def get_sensors(db: Session = Depends(get_db)):
-#     return db.query(models.Sensor).all()
-
-# @app.get("/sensors/")
-# async def get_sensors(id: Optional[str] = None, **filters):
-#     print(id)
-#     if id:
-#         return sensors.get(id, {})
-#     if filters:
-#         return {sensor_id: sensor for sensor_id, sensor in sensors.items() if all(getattr(sensor, k, None) == v for k, v in filters.items())}
-#     return list(sensors.values())
-
-# @app.post("/sensors/")
-# async def create_sensor(sensor: models.Sensor, db: Session = Depends(get_db)):
-#     db.add(sensor)
-#     db.commit()
-#     db.refresh(sensor)
-#     return sensor
-
-# @app.get("/sensor_readings/")
-# async def get_sensor_readings(sensor_id: str, n_samples: Optional[int] = None, n_days: Optional[int] = None):
-#     readings = sensor_readings.get(sensor_id, [])
-#     if n_samples:
-#         return readings[-n_samples:]
-#     if n_days:
-#         cutoff = datetime.now() - timedelta(days=n_days)
-#         return [reading for reading in readings if reading['timestamp'] > cutoff]
-#     return readings
-
-# @app.post("/sensor_readings/")
-# async def add_sensor_reading(reading: SensorReading):
-#     if reading.sensor_id not in sensors:
-#         raise HTTPException(status_code=404, detail="Sensor not found")
-#     if reading.sensor_id not in sensor_readings:
-#         sensor_readings[reading.sensor_id] = []
-#     sensor_readings[reading.sensor_id].append(reading.dict())
-#     return {"message": "Reading added"}
+@app.post("/sensors/{sensor_id}", response_model=schemas.SensorReading)
+def create_sensor_reading(sensor_id: int, value: float, db: Session = Depends(get_db)):
+    db_sensor = crud.get_sensor(db, sensor_id=sensor_id)
+    if not db_sensor:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    return crud.create_sensor_reading(db=db, sensor_id=sensor_id, value=value)

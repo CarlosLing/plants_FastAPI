@@ -38,6 +38,11 @@ class SensorReading(SensorReadingBase):
         orm_mode = True
 
 
+class SensorReadingArray(BaseModel):
+    values: List[float]
+    timestamps: List[datetime]
+
+
 class Sensor(SensorBase):
     id: int
     readings: List[SensorReading] = []
